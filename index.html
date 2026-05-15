@@ -690,6 +690,11 @@ const CATEGORY_META = {
   end:     { label: 'End Game',              cls: 'end',     order: 6 },
 };
 
+// ── Persist to localStorage ──
+function saveToStorage() {
+  localStorage.setItem('eldritchRites', JSON.stringify(Array.from(activeSet)));
+}
+
 // ── Toggle rule cards ──
 const cards = document.querySelectorAll('.rule-card');
 cards.forEach(function(card) {
@@ -710,6 +715,7 @@ cards.forEach(function(card) {
       };
     }
     updateSummary();
+    saveToStorage();
   });
 });
 
@@ -745,6 +751,7 @@ function applyPreset(preset) {
     }
   });
   updateSummary();
+  saveToStorage();
   document.getElementById('active-summary').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
@@ -819,6 +826,16 @@ function buildTracker() {
     groupsEl.appendChild(groupEl);
   });
 }
+
+// ── Restore from localStorage on load ──
+(function() {
+  var saved = [];
+  try { saved = JSON.parse(localStorage.getItem('eldritchRites') || '[]'); } catch(e) {}
+  saved.forEach(function(id) {
+    var card = document.querySelector('[data-id="'+id+'"]');
+    if (card) card.click();
+  });
+})();
 
 updateSummary();
 </script>
