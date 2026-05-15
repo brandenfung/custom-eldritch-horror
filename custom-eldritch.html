@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Drinking Rites — Eldritch Horror</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Crimson+Pro:ital,wght@0,300;0,400;1,300;1,400&display=swap');
+
+  :root {
+    --void: #050508;
+    --ritual: #c84b8a;
+    --glow: #e060a0;
+    --whisper: #f0a8d0;
+    --pale: #f8e8f0;
+    --gold: #c8a84b;
+    --gold-dim: #8a6820;
+    --slime: #6ab030;
+    --active-border: rgba(200,75,138,0.8);
+    --inactive-border: rgba(200,75,138,0.15);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--void);
+    color: var(--pale);
+    font-family: 'Crimson Pro', serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 20% 30%, rgba(74,25,66,0.22) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 80% at 80% 70%, rgba(26,58,26,0.13) 0%, transparent 60%);
+    pointer-events: none; z-index: 0;
+  }
+
+  .stars { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+  .star {
+    position: absolute; border-radius: 50%; background: var(--whisper);
+    animation: blink var(--dur) infinite var(--delay) ease-in-out;
+  }
+  @keyframes blink { 0%,100% { opacity: 0.07; } 50% { opacity: 0.75; } }
+
+  /* ── Tab bar ── */
+  .tab-bar {
+    position: sticky; top: 0; z-index: 100;
+    display: flex;
+    background: rgba(5,5,8,0.96);
+    border-bottom: 1px solid rgba(200,168,75,0.18);
+    backdrop-filter: blur(10px);
+  }
+  .tab-btn {
+    flex: 1; padding: 15px 8px;
+    font-family: 'Cinzel Decorative', serif; font-size: 11px;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: rgba(200,168,75,0.38);
+    background: none; border: none; cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .tab-btn.active { color: var(--gold); border-bottom-color: var(--gold); }
+
+  /* ── Panels ── */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* ── Shared container ── */
+  .container {
+    position: relative; z-index: 1;
+    max-width: 900px; margin: 0 auto; padding: 36px 20px 80px;
+  }
+
+  /* ── Header ── */
+  header { text-align: center; margin-bottom: 44px; padding-top: 32px; }
+  header::before {
+    content: '⊗';
+    display: block; font-size: 40px; color: var(--gold); opacity: 0.52;
+    margin-bottom: 16px;
+    animation: rotate-slow 22s linear infinite;
+    text-shadow: 0 0 28px var(--gold);
+  }
+  @keyframes rotate-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  header h1 {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: clamp(20px, 4.5vw, 36px); font-weight: 900; line-height: 1.2;
+    color: var(--gold);
+    text-shadow: 0 0 40px rgba(200,168,75,0.5);
+    margin-bottom: 10px;
+  }
+  header .subtitle {
+    font-size: 12px; font-style: italic; color: var(--whisper);
+    opacity: 0.55; letter-spacing: 0.18em; text-transform: uppercase;
+  }
+
+  .warning {
+    border: 1px solid rgba(200,75,138,0.3);
+    background: rgba(74,25,66,0.16);
+    padding: 14px 22px; margin-bottom: 40px; border-radius: 2px;
+    font-style: italic; font-size: 13px; color: var(--whisper);
+    line-height: 1.7; text-align: center;
+  }
+
+  .section-title {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: clamp(12px, 2.2vw, 17px); color: var(--gold);
+    letter-spacing: 0.1em; margin-bottom: 22px; padding-bottom: 9px;
+    border-bottom: 1px solid rgba(200,168,75,0.2);
+    text-shadow: 0 0 18px rgba(200,168,75,0.3);
+    display: flex; align-items: center; gap: 9px;
+  }
+
+  /* ── Active summary (setup tab) ── */
+  #active-summary {
+    background: rgba(10,10,20,0.75);
+    border: 1px solid rgba(200,168,75,0.28);
+    padding: 18px 22px; margin-bottom: 32px; border-radius: 2px;
+  }
+  #active-summary .summary-header {
+    font-family: 'Cinzel Decorative', serif; font-size: 11px;
+    color: var(--gold); letter-spacing: 0.12em; text-transform: uppercase;
+    margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;
+  }
+  #active-count {
+    background: rgba(200,75,138,0.2); color: var(--glow);
+    padding: 2px 10px; border-radius: 20px; font-size: 11px;
+    border: 1px solid rgba(200,75,138,0.38);
+  }
+  #active-list { display: flex; flex-wrap: wrap; gap: 7px; }
+  .active-pill {
+    font-size: 11px; padding: 3px 11px;
+    background: rgba(200,75,138,0.12); border: 1px solid rgba(200,75,138,0.35);
+    border-radius: 20px; color: var(--whisper);
+    font-family: 'Cinzel Decorative', serif; letter-spacing: 0.04em;
+  }
+  .active-pill.none {
+    color: rgba(248,232,240,0.26); border-color: rgba(200,75,138,0.1);
+    background: none; font-family: 'Crimson Pro', serif; font-style: italic; letter-spacing: 0;
+  }
+
+  /* ── Presets ── */
+  .presets {
+    display: flex; flex-wrap: wrap; gap: 9px; margin-bottom: 36px; align-items: center;
+  }
+  .presets-label {
+    font-family: 'Cinzel Decorative', serif; font-size: 10px;
+    color: var(--gold-dim); letter-spacing: 0.1em; text-transform: uppercase;
+  }
+  .preset-btn {
+    font-family: 'Cinzel Decorative', serif; font-size: 10px;
+    padding: 7px 14px; border-radius: 1px; cursor: pointer;
+    letter-spacing: 0.07em; text-transform: uppercase;
+    border: 1px solid rgba(200,168,75,0.32); background: rgba(200,168,75,0.05);
+    color: var(--gold); transition: all 0.2s;
+  }
+  .preset-btn:hover { background: rgba(200,168,75,0.14); border-color: rgba(200,168,75,0.55); }
+  .preset-btn.danger { border-color: rgba(200,75,138,0.38); background: rgba(200,75,138,0.06); color: var(--ritual); }
+  .preset-btn.danger:hover { background: rgba(200,75,138,0.18); }
+  .preset-btn.clear { border-color: rgba(248,232,240,0.12); background: transparent; color: rgba(248,232,240,0.26); }
+  .preset-btn.clear:hover { color: rgba(248,232,240,0.5); border-color: rgba(248,232,240,0.28); }
+
+  /* ── Rule cards (setup) ── */
+  .rules-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(256px, 1fr));
+    gap: 14px; margin-bottom: 50px;
+  }
+  .rule-card {
+    background: rgba(15,15,30,0.72);
+    border: 1px solid var(--inactive-border);
+    padding: 18px 16px; border-radius: 2px;
+    cursor: pointer; position: relative; overflow: hidden;
+    transition: border-color 0.22s, transform 0.22s, box-shadow 0.22s, background 0.22s;
+    user-select: none;
+  }
+  .rule-card:hover { border-color: rgba(200,75,138,0.42); transform: translateY(-2px); }
+  .rule-card.active {
+    border-color: var(--active-border);
+    background: rgba(74,25,66,0.26);
+    box-shadow: 0 0 20px rgba(200,75,138,0.16);
+  }
+  .rule-card.active::after {
+    content: '✓';
+    position: absolute; top: 12px; right: 13px;
+    font-size: 13px; color: var(--ritual); font-family: sans-serif;
+  }
+  .rule-category {
+    font-family: 'Cinzel Decorative', serif; font-size: 10px;
+    text-transform: uppercase; letter-spacing: 0.13em;
+    margin-bottom: 6px; display: flex; align-items: center; gap: 5px;
+  }
+  .rule-category::before { content: '▸'; font-size: 9px; }
+  .rule-name { font-size: 15px; color: var(--pale); margin-bottom: 7px; line-height: 1.3; }
+  .rule-desc {
+    font-size: 12px; color: var(--whisper); opacity: 0.68;
+    line-height: 1.6; font-style: italic; margin-bottom: 9px;
+  }
+  .rule-sips {
+    font-size: 11px; font-family: 'Cinzel Decorative', serif;
+    color: var(--gold); letter-spacing: 0.05em;
+  }
+
+  /* Category colour coding */
+  .cat-doom     { color: #e06060; }
+  .cat-omen     { color: var(--gold); }
+  .cat-sanity   { color: var(--glow); }
+  .cat-mystery  { color: var(--slime); }
+  .cat-death    { color: #e06060; }
+  .cat-social   { color: #80a0f0; }
+  .cat-end      { color: var(--gold); }
+
+  .tag {
+    display: inline-block; font-size: 9px; padding: 2px 7px;
+    border-radius: 1px; text-transform: uppercase; letter-spacing: 0.1em;
+    font-family: 'Cinzel Decorative', serif; margin-top: 7px;
+  }
+  .tag-doom    { background: rgba(50,10,10,0.45);  color: #e04040; border: 1px solid rgba(180,40,40,0.32); }
+  .tag-omen    { background: rgba(200,168,75,0.1); color: var(--gold); border: 1px solid rgba(200,168,75,0.28); }
+  .tag-sanity  { background: rgba(138,42,106,0.22); color: var(--glow); border: 1px solid rgba(138,42,106,0.42); }
+  .tag-mystery { background: rgba(26,58,26,0.32);  color: var(--slime); border: 1px solid rgba(106,176,48,0.28); }
+  .tag-social  { background: rgba(30,30,80,0.38);  color: #80a0f0; border: 1px solid rgba(80,100,200,0.28); }
+
+  /* ── Drinks ── */
+  .drinks-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(256px, 1fr));
+    gap: 18px; margin-bottom: 50px;
+  }
+  .drink-card {
+    background: linear-gradient(160deg, rgba(26,58,26,0.22) 0%, rgba(10,10,20,0.52) 60%);
+    border: 1px solid rgba(106,176,48,0.26);
+    padding: 20px 18px; border-radius: 2px; transition: all 0.3s;
+  }
+  .drink-card:hover { border-color: rgba(106,176,48,0.52); }
+  .drink-name { font-family: 'Cinzel Decorative', serif; font-size: 12px; color: var(--slime); margin-bottom: 3px; }
+  .drink-subtitle { font-size: 11px; color: rgba(248,232,240,0.38); margin-bottom: 11px; font-style: italic; }
+  .drink-ingredients { list-style: none; font-size: 12px; color: var(--pale); line-height: 1.85; }
+  .drink-ingredients li::before { content: '— '; color: var(--slime); opacity: 0.5; }
+  .drink-note { margin-top: 9px; font-size: 11px; font-style: italic; color: var(--glow); opacity: 0.6; }
+
+  /* ── SESSION TRACKER ── */
+  #tracker-empty {
+    text-align: center; padding: 60px 20px;
+    font-style: italic; color: rgba(248,232,240,0.28); font-size: 15px; line-height: 2;
+  }
+  #tracker-empty span {
+    display: block; font-family: 'Cinzel Decorative', serif;
+    font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: rgba(200,168,75,0.28); margin-bottom: 12px;
+  }
+
+  .tracker-container { padding: 28px 20px 80px; max-width: 900px; margin: 0 auto; position: relative; z-index: 1; }
+
+  .tracker-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 28px; padding-bottom: 12px;
+    border-bottom: 1px solid rgba(200,168,75,0.16);
+  }
+  .tracker-title {
+    font-family: 'Cinzel Decorative', serif; font-size: 13px;
+    color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase;
+    text-shadow: 0 0 16px rgba(200,168,75,0.3);
+  }
+  .tracker-hint {
+    font-size: 12px; font-style: italic; color: rgba(248,232,240,0.3);
+  }
+
+  /* Category group */
+  .tracker-group { margin-bottom: 32px; }
+  .tracker-group-label {
+    font-family: 'Cinzel Decorative', serif; font-size: 10px;
+    text-transform: uppercase; letter-spacing: 0.15em;
+    margin-bottom: 12px; padding: 6px 0 6px 12px;
+    border-left: 3px solid;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .tracker-group-label.doom    { color: #e06060; border-color: #e06060; }
+  .tracker-group-label.omen    { color: var(--gold); border-color: var(--gold); }
+  .tracker-group-label.sanity  { color: var(--glow); border-color: var(--glow); }
+  .tracker-group-label.mystery { color: var(--slime); border-color: var(--slime); }
+  .tracker-group-label.death   { color: #e06060; border-color: #e06060; }
+  .tracker-group-label.social  { color: #80a0f0; border-color: #80a0f0; }
+  .tracker-group-label.end     { color: var(--gold); border-color: var(--gold); }
+
+  /* Tracker rite row */
+  .tracker-rite {
+    background: rgba(15,15,30,0.65);
+    border: 1px solid rgba(200,75,138,0.14);
+    padding: 14px 16px;
+    border-radius: 2px; margin-bottom: 8px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px; align-items: center;
+  }
+  .tracker-rite-name {
+    font-size: 15px; color: var(--pale); line-height: 1.2; margin-bottom: 3px;
+  }
+  .tracker-rite-sips {
+    font-size: 12px; font-family: 'Cinzel Decorative', serif;
+    color: var(--gold); letter-spacing: 0.04em;
+  }
+  .tracker-rite-desc {
+    font-size: 12px; color: var(--whisper); opacity: 0.55;
+    font-style: italic; line-height: 1.5; margin-top: 4px;
+  }
+
+  /* "Happened!" flash button */
+  .happened-btn {
+    flex-shrink: 0;
+    font-family: 'Cinzel Decorative', serif; font-size: 10px;
+    padding: 8px 14px; border-radius: 1px; cursor: pointer;
+    letter-spacing: 0.07em; text-transform: uppercase;
+    border: 1px solid rgba(200,75,138,0.35);
+    background: rgba(200,75,138,0.08);
+    color: var(--ritual);
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .happened-btn:hover { background: rgba(200,75,138,0.22); border-color: rgba(200,75,138,0.7); }
+  .happened-btn.flash {
+    background: rgba(200,75,138,0.45) !important;
+    border-color: var(--ritual) !important;
+    color: var(--pale) !important;
+    transform: scale(1.06);
+  }
+
+  /* Flash overlay on whole row */
+  .tracker-rite.fired {
+    border-color: rgba(200,75,138,0.6);
+    background: rgba(74,25,66,0.35);
+    transition: all 0.1s;
+  }
+
+  .divider { text-align: center; color: var(--gold-dim); font-size: 15px; letter-spacing: 0.5em; margin: 32px 0; opacity: 0.35; }
+
+  footer {
+    text-align: center; margin-top: 44px; padding-top: 22px;
+    border-top: 1px solid rgba(200,168,75,0.1);
+    font-size: 12px; color: rgba(248,232,240,0.24); font-style: italic; line-height: 2;
+  }
+
+  .fadeUp { animation: fadeUp 0.45s ease both; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+
+<div class="stars" id="stars"></div>
+
+<!-- Tab bar -->
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="showTab('setup')">📜 Setup & Rites</button>
+  <button class="tab-btn" onclick="showTab('tracker')">⊗ Session Tracker</button>
+  <button class="tab-btn" onclick="showTab('drinks')">🍵 Elixirs</button>
+</div>
+
+<!-- ═══════════════════════════════════════ SETUP TAB ═══ -->
+<div id="panel-setup" class="panel active">
+<div class="container">
+
+  <header>
+    <h1>The Drinking Rites<br>of the Old Ones</h1>
+    <p class="subtitle">Eldritch Horror Edition — Select your rites before the first Mythos card is drawn</p>
+  </header>
+
+  <div class="warning">
+    ✦ Adults of legal drinking age only. Drink water. Know your limits. Never drive.
+    Watch over your fellow investigators — the Old Ones demand you all make it home. ✦
+  </div>
+
+  <div id="active-summary">
+    <div class="summary-header">
+      <span>Active Rites This Session</span>
+      <span id="active-count">0 selected</span>
+    </div>
+    <div id="active-list">
+      <span class="active-pill none">No rites selected — tap cards below to activate them</span>
+    </div>
+  </div>
+
+  <div class="section-title" style="margin-bottom:16px;">Quick Start</div>
+  <div class="presets" style="margin-bottom:36px;">
+    <button class="preset-btn" onclick="applyPreset('light')">☽ Light (3 rules)</button>
+    <button class="preset-btn" onclick="applyPreset('medium')">⊗ Standard (7 rules)</button>
+    <button class="preset-btn danger" onclick="applyPreset('full')">☠ Full Ritual (all)</button>
+    <button class="preset-btn clear" onclick="applyPreset('none')">Clear All</button>
+  </div>
+
+  <div class="section-title">📜 The Rites — Tap to Toggle</div>
+  <div class="rules-grid" id="rules-grid">
+
+    <div class="rule-card" data-id="doom-advance" data-name="The Doom Advances" data-category="doom" data-sips="1 Sip — all players" data-desc="Whenever a Doom token is added — gate opens, Rumor fails, or Omen effect — everyone takes 1 sip in unison." data-preset="light medium full">
+      <div class="rule-category cat-doom">Doom Track</div>
+      <div class="rule-name">The Doom Advances</div>
+      <div class="rule-desc">Whenever a Doom token is added — gate opens, Rumor fails, or Omen effect — everyone takes 1 sip in unison.</div>
+      <div class="rule-sips">1 Sip — all players</div>
+      <span class="tag tag-doom">Doom</span>
+    </div>
+
+    <div class="rule-card" data-id="ancient-awakes" data-name="It Awakens" data-category="doom" data-sips="Finish your drink — all players" data-desc="The Doom track fills and the Ancient One awakens. Everyone finishes their current drink before the final battle." data-preset="light medium full">
+      <div class="rule-category cat-doom">Doom Track</div>
+      <div class="rule-name">It Awakens</div>
+      <div class="rule-desc">The Doom track fills and the Ancient One awakens. Everyone finishes their current drink before the final battle.</div>
+      <div class="rule-sips">Finish your drink — all players</div>
+      <span class="tag tag-doom">Doom</span>
+    </div>
+
+    <div class="rule-card" data-id="omen-advance" data-name="The Omen Turns" data-category="omen" data-sips="1 Sip (2 if Doom triggers)" data-desc="Each time the Omen marker advances during the Mythos Phase, 1 sip. If it triggers Doom via a matching gate, 2 sips." data-preset="medium full">
+      <div class="rule-category cat-omen">Omen Track</div>
+      <div class="rule-name">The Omen Turns</div>
+      <div class="rule-desc">Each time the Omen marker advances during the Mythos Phase, 1 sip. If it triggers Doom via a matching gate, 2 sips.</div>
+      <div class="rule-sips">1 Sip (2 if Doom triggers)</div>
+      <span class="tag tag-omen">Omen</span>
+    </div>
+
+    <div class="rule-card" data-id="clue-fail" data-name="The Mystery Deepens" data-category="mystery" data-sips="1 Sip — the failing investigator" data-desc="An investigator fails a roll needed to advance the active Mystery. They drink 1 sip and narrate what they saw." data-preset="medium full">
+      <div class="rule-category cat-mystery">Mysteries</div>
+      <div class="rule-name">The Mystery Deepens</div>
+      <div class="rule-desc">An investigator fails a roll needed to advance the active Mystery. They drink 1 sip and narrate what they saw.</div>
+      <div class="rule-sips">1 Sip — the failing investigator</div>
+      <span class="tag tag-mystery">Mystery</span>
+    </div>
+
+    <div class="rule-card" data-id="mystery-solved" data-name="A Mystery Solved" data-category="mystery" data-sips="1 Sip — all others; +1 assigned by solver" data-desc="An investigator completes a Mystery. Everyone else drinks 1 sip. The solver assigns 1 bonus sip to anyone they choose." data-preset="full">
+      <div class="rule-category cat-mystery">Mysteries</div>
+      <div class="rule-name">A Mystery Solved</div>
+      <div class="rule-desc">An investigator completes a Mystery. Everyone else drinks 1 sip. The solver assigns 1 bonus sip to anyone they choose.</div>
+      <div class="rule-sips">1 Sip — all others; +1 assigned by solver</div>
+      <span class="tag tag-mystery">Mystery</span>
+    </div>
+
+    <div class="rule-card" data-id="sanity-loss" data-name="The Mind Fractures" data-category="sanity" data-sips="1 Sip per 2 Sanity lost" data-desc="An investigator loses 2+ Sanity from a single Horror test or effect. They drink 1 sip per 2 Sanity lost." data-preset="light medium full">
+      <div class="rule-category cat-sanity">Sanity</div>
+      <div class="rule-name">The Mind Fractures</div>
+      <div class="rule-desc">An investigator loses 2+ Sanity from a single Horror test or effect. They drink 1 sip per 2 Sanity lost.</div>
+      <div class="rule-sips">1 Sip per 2 Sanity lost</div>
+      <span class="tag tag-sanity">Sanity</span>
+    </div>
+
+    <div class="rule-card" data-id="go-insane" data-name="The Spiral" data-category="sanity" data-sips="Finish drink + 2 sips for one companion" data-desc="An investigator is driven Insane (Sanity hits 0). They finish their drink and choose one companion to drink 2 sips." data-preset="medium full">
+      <div class="rule-category cat-sanity">Sanity</div>
+      <div class="rule-name">The Spiral</div>
+      <div class="rule-desc">An investigator is driven Insane (Sanity hits 0). They finish their drink and choose one companion to drink 2 sips.</div>
+      <div class="rule-sips">Finish drink + 2 sips for one companion</div>
+      <span class="tag tag-sanity">Sanity</span>
+    </div>
+
+    <div class="rule-card" data-id="condition" data-name="A Cursed Condition" data-category="sanity" data-sips="1 Sip — the conditioned investigator" data-desc="An investigator gains a negative Condition card (Amnesia, Paranoia, Haunted…). 1 sip, read the flavour text in character." data-preset="full">
+      <div class="rule-category cat-sanity">Sanity</div>
+      <div class="rule-name">A Cursed Condition</div>
+      <div class="rule-desc">An investigator gains a negative Condition card (Amnesia, Paranoia, Haunted…). 1 sip, read the flavour text in character.</div>
+      <div class="rule-sips">1 Sip — the conditioned investigator</div>
+      <span class="tag tag-sanity">Sanity</span>
+    </div>
+
+    <div class="rule-card" data-id="devoured" data-name="Devoured by the Darkness" data-category="death" data-sips="3 Sips — all players" data-desc="An investigator is Devoured — eliminated entirely. Everyone drinks 3 sips. The devoured player gives their final words." data-preset="light medium full">
+      <div class="rule-category cat-death">Health / Death</div>
+      <div class="rule-name">Devoured by the Darkness</div>
+      <div class="rule-desc">An investigator is Devoured — eliminated entirely. Everyone drinks 3 sips. The devoured player gives their final words.</div>
+      <div class="rule-sips">3 Sips — all players</div>
+      <span class="tag tag-doom">Death</span>
+    </div>
+
+    <div class="rule-card" data-id="health-loss" data-name="Flesh and Blood" data-category="death" data-sips="1 Sip (whole table if barely alive)" data-desc="An investigator loses 3+ Health in one attack. 1 sip. If they survive on exactly 1 Health, whole table drinks 1." data-preset="full">
+      <div class="rule-category cat-death">Health / Death</div>
+      <div class="rule-name">Flesh and Blood</div>
+      <div class="rule-desc">An investigator loses 3+ Health in one attack. 1 sip. If they survive on exactly 1 Health, whole table drinks 1.</div>
+      <div class="rule-sips">1 Sip (whole table if barely alive)</div>
+      <span class="tag tag-doom">Death</span>
+    </div>
+
+    <div class="rule-card" data-id="dark-bargain" data-name="The Bargain Accepted" data-category="social" data-sips="2 Sips — the investigator" data-desc="An encounter offers a deal with a dark entity and the investigator takes it. 2 sips for their corrupted soul." data-preset="medium full">
+      <div class="rule-category cat-social">Encounters</div>
+      <div class="rule-name">The Bargain Accepted</div>
+      <div class="rule-desc">An encounter offers a deal with a dark entity and the investigator takes it. 2 sips for their corrupted soul.</div>
+      <div class="rule-sips">2 Sips — the investigator</div>
+      <span class="tag tag-social">Encounter</span>
+    </div>
+
+    <div class="rule-card" data-id="dramatic-reading" data-name="The Dramatic Reading" data-category="social" data-sips="Give 1 Sip to smilers, or drink 2 yourself" data-desc="Read your encounter card aloud in full character voice. Give 1 sip to anyone who smiles. Break yourself, drink 2." data-preset="full">
+      <div class="rule-category cat-social">Encounters</div>
+      <div class="rule-name">The Dramatic Reading</div>
+      <div class="rule-desc">Read your encounter card aloud in full character voice. Give 1 sip to anyone who smiles. Break yourself, drink 2.</div>
+      <div class="rule-sips">Give 1 Sip to smilers, or drink 2 yourself</div>
+      <span class="tag tag-social">Social</span>
+    </div>
+
+    <div class="rule-card" data-id="monster-surge" data-name="They Keep Coming" data-category="doom" data-sips="1 Sip per monster beyond 2 — split freely" data-desc="A Spawn effect places 3+ monsters in one phase. 1 sip per monster beyond the second, split however the group agrees." data-preset="medium full">
+      <div class="rule-category cat-doom">Monsters</div>
+      <div class="rule-name">They Keep Coming</div>
+      <div class="rule-desc">A Spawn effect places 3+ monsters in one phase. 1 sip per monster beyond the second, split however the group agrees.</div>
+      <div class="rule-sips">1 Sip per monster beyond 2 — split freely</div>
+      <span class="tag tag-doom">Monsters</span>
+    </div>
+
+    <div class="rule-card" data-id="rulebook" data-name="Consulting the Forbidden Tome" data-category="social" data-sips="1 Sip each — looker-up and the cause" data-desc="Anyone opens the rulebook mid-game. The person who opens it drinks 1 sip. The one who caused the confusion drinks 1 sip." data-preset="full">
+      <div class="rule-category cat-social">Table Meta</div>
+      <div class="rule-name">Consulting the Forbidden Tome</div>
+      <div class="rule-desc">Anyone opens the rulebook mid-game. The person who opens it drinks 1 sip. The one who caused the confusion drinks 1 sip.</div>
+      <div class="rule-sips">1 Sip each — looker-up and the cause</div>
+      <span class="tag tag-social">Meta</span>
+    </div>
+
+    <div class="rule-card" data-id="prophecy" data-name="The Prophecy" data-category="social" data-sips="2 Sips — everyone if true, prophet if false" data-desc="At game start each player writes a secret prediction. Reveal at end — if true everyone else drinks 2, if false the prophet does." data-preset="full">
+      <div class="rule-category cat-social">Deeper Rites</div>
+      <div class="rule-name">The Prophecy</div>
+      <div class="rule-desc">At game start each player writes a secret prediction. Reveal at end — if true everyone else drinks 2, if false the prophet does.</div>
+      <div class="rule-sips">2 Sips — everyone if true, prophet if false</div>
+      <span class="tag tag-social">Social</span>
+    </div>
+
+    <div class="rule-card" data-id="monologue" data-name="The Dread Monologue" data-category="social" data-sips="1 Sip — those who break" data-desc="Once per game, speak as the Ancient One for 30 seconds. Those who can't keep a straight face drink 1 sip." data-preset="full">
+      <div class="rule-category cat-social">Deeper Rites</div>
+      <div class="rule-name">The Dread Monologue</div>
+      <div class="rule-desc">Once per game, speak as the Ancient One for 30 seconds. Those who can't keep a straight face drink 1 sip.</div>
+      <div class="rule-sips">1 Sip — those who break</div>
+      <span class="tag tag-social">Social</span>
+    </div>
+
+    <div class="rule-card" data-id="victory" data-name="The Survivors' Toast" data-category="end" data-sips="Ceremonial — 1 Sip if no deaths" data-desc="Investigators win. Toast each Devoured investigator by name. If no one died, everyone drinks 1 sip in suspicious disbelief." data-preset="medium full">
+      <div class="rule-category cat-end">End Game</div>
+      <div class="rule-name">The Survivors' Toast</div>
+      <div class="rule-desc">Investigators win. Toast each Devoured investigator by name. If no one died, everyone drinks 1 sip in suspicious disbelief.</div>
+      <div class="rule-sips">Ceremonial — 1 Sip if no deaths</div>
+      <span class="tag tag-omen">End Game</span>
+    </div>
+
+    <div class="rule-card" data-id="defeat" data-name="The Silence of Defeat" data-category="end" data-sips="Finish your drink — all players" data-desc="Investigators lose. Everyone drinks in silence for 5 full seconds. The first person to speak explains what went wrong." data-preset="medium full">
+      <div class="rule-category cat-end">End Game</div>
+      <div class="rule-name">The Silence of Defeat</div>
+      <div class="rule-desc">Investigators lose. Everyone drinks in silence for 5 full seconds. The first person to speak explains what went wrong.</div>
+      <div class="rule-sips">Finish your drink — all players</div>
+      <span class="tag tag-doom">End Game</span>
+    </div>
+
+  </div>
+
+  <div class="divider">✦ · · · ✦ · · · ✦</div>
+  <footer>
+    "That is not dead which can eternal lie, and with strange aeons even death may drink."<br>
+    — adapted from H.P. Lovecraft, probably, if he'd been to more game nights<br><br>
+    Please drink responsibly. The Elder Gods will wait.
+  </footer>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════ TRACKER TAB ═══ -->
+<div id="panel-tracker" class="panel">
+<div class="tracker-container">
+
+  <div id="tracker-empty">
+    <span>No rites active</span>
+    Go to Setup &amp; Rites and select at least one rite to begin tracking.
+  </div>
+
+  <div id="tracker-content" style="display:none;">
+    <div class="tracker-header">
+      <div class="tracker-title">Session Tracker</div>
+      <div class="tracker-hint">Something happened? Tap it.</div>
+    </div>
+    <div id="tracker-groups"></div>
+  </div>
+
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════ DRINKS TAB ═══ -->
+<div id="panel-drinks" class="panel">
+<div class="container">
+  <header style="margin-bottom:32px; padding-top:28px;">
+    <h1 style="font-size:clamp(18px,4vw,30px);">Elixirs of the Void</h1>
+    <p class="subtitle">Libations for the long night ahead</p>
+  </header>
+
+  <div class="drinks-grid">
+    <div class="drink-card">
+      <div class="drink-name">The Nameless Fog</div>
+      <div class="drink-subtitle">Signature cocktail of the evening</div>
+      <ul class="drink-ingredients">
+        <li>2 oz blue curaçao</li>
+        <li>1 oz white rum</li>
+        <li>½ oz lime juice</li>
+        <li>Top with lychee juice</li>
+        <li>Dry ice (optional, use safely)</li>
+      </ul>
+      <div class="drink-note">Pale, glowing, and unsettling. Suitable.</div>
+    </div>
+    <div class="drink-card">
+      <div class="drink-name">Shoggoth's Blood</div>
+      <div class="drink-subtitle">For the truly unafraid</div>
+      <ul class="drink-ingredients">
+        <li>2 oz dark rum</li>
+        <li>1 oz blackcurrant liqueur</li>
+        <li>½ oz grenadine</li>
+        <li>Splash of cola</li>
+        <li>Black sugar rim</li>
+      </ul>
+      <div class="drink-note">Disturbingly viscous. Best not to ask what's in it.</div>
+    </div>
+    <div class="drink-card">
+      <div class="drink-name">The Innsmouth Look</div>
+      <div class="drink-subtitle">Non-alcoholic option</div>
+      <ul class="drink-ingredients">
+        <li>Blue lemonade</li>
+        <li>Cucumber slices</li>
+        <li>Mint and basil</li>
+        <li>Splash of tonic water</li>
+        <li>1 drop green food colouring</li>
+      </ul>
+      <div class="drink-note">Refreshing, faintly oceanic. You'll fit right in.</div>
+    </div>
+    <div class="drink-card">
+      <div class="drink-name">The Miskatonic Mule</div>
+      <div class="drink-subtitle">Academic and devastating</div>
+      <ul class="drink-ingredients">
+        <li>2 oz vodka</li>
+        <li>½ oz elderflower liqueur</li>
+        <li>Ginger beer to top</li>
+        <li>Squeeze of lemon</li>
+        <li>A single black olive</li>
+      </ul>
+      <div class="drink-note">The olive is the singular forbidden truth at the bottom of the cup.</div>
+    </div>
+    <div class="drink-card">
+      <div class="drink-name">Pickman's Model</div>
+      <div class="drink-subtitle">Not for the weak of stomach</div>
+      <ul class="drink-ingredients">
+        <li>1.5 oz mezcal (smoky)</li>
+        <li>¾ oz Aperol</li>
+        <li>½ oz blood orange juice</li>
+        <li>Charcoal salt rim</li>
+      </ul>
+      <div class="drink-note">Looks wrong and tastes like something ancient and beautiful.</div>
+    </div>
+    <div class="drink-card">
+      <div class="drink-name">Elder Sign Seltzer</div>
+      <div class="drink-subtitle">For the designated keeper of bodies</div>
+      <ul class="drink-ingredients">
+        <li>Sparkling water</li>
+        <li>Elderflower cordial</li>
+        <li>Cucumber and mint</li>
+        <li>A thin slice of lemon</li>
+      </ul>
+      <div class="drink-note">Pure, protected. Your investigators need you.</div>
+    </div>
+  </div>
+
+  <footer>
+    "That is not dead which can eternal lie, and with strange aeons even death may drink."<br>
+    — adapted from H.P. Lovecraft, probably, if he'd been to more game nights<br><br>
+    Please drink responsibly. The Elder Gods will wait.
+  </footer>
+</div>
+</div>
+
+<script>
+// ── Stars ──
+const starsEl = document.getElementById('stars');
+for (let i = 0; i < 70; i++) {
+  const s = document.createElement('div');
+  s.className = 'star';
+  const size = Math.random() * 2.5 + 0.5;
+  s.style.cssText = 'width:'+size+'px;height:'+size+'px;top:'+(Math.random()*100)+'%;left:'+(Math.random()*100)+'%;--dur:'+(2+Math.random()*4)+'s;--delay:'+(Math.random()*4)+'s;';
+  starsEl.appendChild(s);
+}
+
+// ── Tab switching ──
+function showTab(tab) {
+  document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('active'); });
+  document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
+  document.getElementById('panel-'+tab).classList.add('active');
+  event.currentTarget.classList.add('active');
+  if (tab === 'tracker') buildTracker();
+}
+
+// ── Active rules state ──
+const activeSet = new Set(); // id -> { name, category, sips, desc }
+const activeData = {};
+
+const CATEGORY_META = {
+  doom:    { label: 'Doom Track & Monsters', cls: 'doom',    order: 0 },
+  omen:    { label: 'Omen Track',            cls: 'omen',    order: 1 },
+  sanity:  { label: 'Sanity',                cls: 'sanity',  order: 2 },
+  mystery: { label: 'Mysteries',             cls: 'mystery', order: 3 },
+  death:   { label: 'Health & Death',        cls: 'death',   order: 4 },
+  social:  { label: 'Encounters & Table',    cls: 'social',  order: 5 },
+  end:     { label: 'End Game',              cls: 'end',     order: 6 },
+};
+
+// ── Toggle rule cards ──
+const cards = document.querySelectorAll('.rule-card');
+cards.forEach(function(card) {
+  card.addEventListener('click', function() {
+    const id = card.dataset.id;
+    if (card.classList.contains('active')) {
+      card.classList.remove('active');
+      activeSet.delete(id);
+      delete activeData[id];
+    } else {
+      card.classList.add('active');
+      activeSet.add(id);
+      activeData[id] = {
+        name:     card.dataset.name,
+        category: card.dataset.category,
+        sips:     card.dataset.sips,
+        desc:     card.dataset.desc,
+      };
+    }
+    updateSummary();
+  });
+});
+
+function updateSummary() {
+  const list = document.getElementById('active-list');
+  const count = document.getElementById('active-count');
+  count.textContent = activeSet.size + ' selected';
+  if (activeSet.size === 0) {
+    list.innerHTML = '<span class="active-pill none">No rites selected — tap cards below to activate them</span>';
+  } else {
+    list.innerHTML = Object.values(activeData)
+      .map(function(d){ return '<span class="active-pill">'+d.name+'</span>'; })
+      .join('');
+  }
+}
+
+function applyPreset(preset) {
+  activeSet.clear();
+  Object.keys(activeData).forEach(function(k){ delete activeData[k]; });
+  cards.forEach(function(card) {
+    const presets = (card.dataset.preset || '').split(' ');
+    if (preset !== 'none' && presets.includes(preset)) {
+      card.classList.add('active');
+      activeSet.add(card.dataset.id);
+      activeData[card.dataset.id] = {
+        name:     card.dataset.name,
+        category: card.dataset.category,
+        sips:     card.dataset.sips,
+        desc:     card.dataset.desc,
+      };
+    } else {
+      card.classList.remove('active');
+    }
+  });
+  updateSummary();
+  document.getElementById('active-summary').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ── Build tracker ──
+function buildTracker() {
+  const empty = document.getElementById('tracker-empty');
+  const content = document.getElementById('tracker-content');
+  const groupsEl = document.getElementById('tracker-groups');
+
+  if (activeSet.size === 0) {
+    empty.style.display = 'block';
+    content.style.display = 'none';
+    return;
+  }
+  empty.style.display = 'none';
+  content.style.display = 'block';
+  groupsEl.innerHTML = '';
+
+  // Group active rites by category
+  const groups = {};
+  Object.values(activeData).forEach(function(d) {
+    if (!groups[d.category]) groups[d.category] = [];
+    groups[d.category].push(d);
+  });
+
+  // Sort categories by order
+  const sortedCats = Object.keys(groups).sort(function(a,b){
+    return (CATEGORY_META[a] ? CATEGORY_META[a].order : 9) - (CATEGORY_META[b] ? CATEGORY_META[b].order : 9);
+  });
+
+  sortedCats.forEach(function(cat) {
+    const meta = CATEGORY_META[cat] || { label: cat, cls: 'social' };
+    const rites = groups[cat];
+
+    const groupEl = document.createElement('div');
+    groupEl.className = 'tracker-group fadeUp';
+
+    const label = document.createElement('div');
+    label.className = 'tracker-group-label ' + meta.cls;
+    label.textContent = meta.label;
+    groupEl.appendChild(label);
+
+    rites.forEach(function(rite) {
+      const row = document.createElement('div');
+      row.className = 'tracker-rite';
+
+      const info = document.createElement('div');
+      info.innerHTML =
+        '<div class="tracker-rite-name">'+rite.name+'</div>' +
+        '<div class="tracker-rite-sips">'+rite.sips+'</div>' +
+        '<div class="tracker-rite-desc">'+rite.desc+'</div>';
+
+      const btn = document.createElement('button');
+      btn.className = 'happened-btn';
+      btn.textContent = 'It happened!';
+      btn.addEventListener('click', function() {
+        row.classList.add('fired');
+        btn.classList.add('flash');
+        btn.textContent = 'DRINK!';
+        setTimeout(function() {
+          row.classList.remove('fired');
+          btn.classList.remove('flash');
+          btn.textContent = 'It happened!';
+        }, 1800);
+      });
+
+      row.appendChild(info);
+      row.appendChild(btn);
+      groupEl.appendChild(row);
+    });
+
+    groupsEl.appendChild(groupEl);
+  });
+}
+
+updateSummary();
+</script>
+</body>
+</html>
