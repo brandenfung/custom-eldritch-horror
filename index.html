@@ -161,6 +161,8 @@
   .preset-btn.danger:hover { background: rgba(200,75,138,0.18); }
   .preset-btn.clear { border-color: rgba(248,232,240,0.12); background: transparent; color: rgba(248,232,240,0.26); }
   .preset-btn.clear:hover { color: rgba(248,232,240,0.5); border-color: rgba(248,232,240,0.28); }
+  .preset-btn.share { border-color: rgba(106,176,48,0.38); background: rgba(106,176,48,0.06); color: var(--slime); }
+  .preset-btn.share:hover { background: rgba(106,176,48,0.16); border-color: rgba(106,176,48,0.6); }
 
   /* ── Rule cards (setup) ── */
   .rules-grid {
@@ -382,12 +384,14 @@
   </div>
 
   <div class="section-title" style="margin-bottom:16px;">Quick Start</div>
-  <div class="presets" style="margin-bottom:36px;">
+  <div class="presets" style="margin-bottom:16px;">
     <button class="preset-btn" onclick="applyPreset('light')">☽ Light (3 rules)</button>
     <button class="preset-btn" onclick="applyPreset('medium')">⊗ Standard (7 rules)</button>
     <button class="preset-btn danger" onclick="applyPreset('full')">☠ Full Ritual (all)</button>
     <button class="preset-btn clear" onclick="applyPreset('none')">Clear All</button>
+    <button class="preset-btn share" id="share-btn" onclick="copyShareLink()">⛓ Copy Share Link</button>
   </div>
+  <div id="share-confirm" style="display:none;font-size:12px;font-style:italic;color:var(--slime);margin-bottom:20px;">✓ Link copied — send it to your fellow investigators</div>
 
   <div class="section-title">📜 The Rites — Tap to Toggle</div>
   <div class="rules-grid" id="rules-grid">
@@ -827,8 +831,29 @@ function buildTracker() {
   });
 }
 
-// ── Restore from localStorage on load ──
+// ── Share link ──
+function copyShareLink() {
+  var ids = Array.from(activeSet).join(',');
+  var url = window.location.origin + window.location.pathname + (ids ? '?rites=' + ids : '');
+  navigator.clipboard.writeText(url).then(function() {
+    var confirm = document.getElementById('share-confirm');
+    confirm.style.display = 'block';
+    setTimeout(function() { confirm.style.display = 'none'; }, 3000);
+  });
+}
+
+// ── Restore from URL params on load (takes priority over localStorage) ──
 (function() {
+  var params = new URLSearchParams(window.location.search);
+  var ritesParam = params.get('rites');
+  if (ritesParam && ritesParam.length > 0) {
+    ritesParam.split(',').forEach(function(id) {
+      var card = document.querySelector('[data-id="'+id+'"]');
+      if (card) card.click();
+    });
+    return; // skip localStorage if URL params present
+  }
+  // ── Restore from localStorage ──
   var saved = [];
   try { saved = JSON.parse(localStorage.getItem('eldritchRites') || '[]'); } catch(e) {}
   saved.forEach(function(id) {
